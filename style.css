@@ -1,0 +1,437 @@
+/*
+ * --------------------------------
+ * 1. Estilos Globais e Reset
+ * --------------------------------
+ */
+:root {
+    --cor-principal: #0fb436; /* Verde para Header e Botões */
+    --cor-verde-claro: #38c156; /* Verde para Hover e Ação */
+    --cor-fundo: #faf8f8; /* Fundo mais claro */
+    --cor-texto: #333;
+    --cor-sombra: rgba(0, 0, 0, 0.15);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Serif', sans-serif;
+    background-color: var(--cor-fundo);
+    color: var(--cor-texto);
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/*
+ * --------------------------------
+ * 2. Header (Faixa Verde no Topo)
+ * --------------------------------
+ */
+.header {
+    background-color: var(--cor-principal); /* Fundo Verde */
+    color: white;
+    padding: 25px 40px;
+    text-align: center;
+    box-shadow: 0 4px 6px var(--cor-sombra);
+}
+
+.header h1 {
+    font-size: 2.2em;
+    margin-bottom: 5px;
+}
+
+.footer {
+    text-align: center;
+    padding: 15px;
+    margin-top: auto;
+    background-color: #c4cac2;
+    font-size: 0.9em;
+    color: #926369;
+}
+
+/*
+ * --------------------------------
+ * 3. Layout Principal das Telas
+ * --------------------------------
+ */
+.content-container {
+    padding: 40px 20px;
+    flex-grow: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.content-container h2 {
+    color: var(--cor-principal);
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--cor-principal);
+    padding-bottom: 5px;
+}
+
+/* --------------------------------
+ * 4. Estilos de Botões e Formulários
+ * -------------------------------- */
+
+/* Estilo Base para todos os Botões de Ação */
+.btn-acao {
+    background-color: var(--cor-principal);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s, transform 0.3s;
+    margin-right: 10px;
+}
+
+.btn-acao:hover {
+    background-color: var(--cor-verde-claro);
+    transform: translateY(-2px);
+}
+
+/* Grupo de Botões (Usado no rodapé das telas de cadastro/listagem) */
+.action-buttons {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #064d00;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap; /* Garante responsividade */
+}
+
+/* --------------------------------
+ * 5. Estilo de Tabela (Listagem de Dados)
+ * -------------------------------- */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background-color: rgb(255, 255, 255);
+    box-shadow: 0 2px 4px var(--cor-sombra);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.data-table th, .data-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #7e7e7e;
+}
+
+.data-table th {
+    background-color: var(--cor-principal);
+    color: white;
+    font-weight: bold;
+}
+
+.data-table tr:nth-child(even) {
+    background-color: #f0f0f0;
+}
+
+.data-table tr:hover {
+    background-color: #e9e9e9;
+    cursor: pointer;
+}
+
+/* --------------------------------
+ * 6. Estilo de Formulário
+ * -------------------------------- */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: var(--cor-texto);
+}
+
+.form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 1em;
+}
+
+/* Estilo para o botão de pesquisa/busca */
+.search-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.search-container input {
+    flex-grow: 1;
+}
+
+/* --------------------------------
+ * 7. Responsividade
+ * -------------------------------- */
+@media (max-width: 992px) {
+    .atalhos-container {
+        grid-template-columns: repeat(2, 1fr); 
+    }
+    .data-table thead {
+        display: none; /* Esconde o cabeçalho em telas pequenas */
+    }
+    .data-table, .data-table tbody, .data-table tr, .data-table td {
+        display: block;
+        width: 100%;
+    }
+    .data-table tr {
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+    }
+    .data-table td {
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+    }
+    .data-table td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        width: 50%;
+        padding-left: 15px;
+        font-weight: bold;
+        text-align: left;
+    }
+}
+@media (max-width: 600px) {
+    .header h1 {
+        font-size: 1.6em;
+    }
+    .atalhos-container {
+        grid-template-columns: 1fr;
+    }
+    .action-buttons {
+        flex-direction: column;
+        gap: 5px;
+    }
+    .btn-acao {
+        width: 100%;
+    }
+}
+/* -------------------------------------- */
+/* ESTILO PARA OS CARDS DE ATALHO */
+/* -------------------------------------- */
+.atalho-card {
+    /* 1. COR DE FUNDO VERDE CLARO */
+    background-color: #D6EAD2; /* Um tom suave de verde claro (Mint Green) */
+    
+    /* 2. CANTOS ARREDONDADOS */
+    border-radius: 15px;
+    
+    /* MELHORIAS ADICIONAIS PARA O VISUAL DE CARD */
+    border: none; /* Remove bordas padrão */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Sombra suave para destacar o card */
+    padding: 25px; /* Aumenta o espaçamento interno */
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.3s ease; /* Transição suave para o efeito hover */
+
+    /* Garante que o texto fique legível */
+    color: #333; 
+    
+    /* Opcional: Se estiver usando Grid para a .atalhos-container */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* Efeito ao passar o mouse para dar feedback ao usuário */
+.atalho-card:hover {
+    background-color: #C0E8C2; /* Fica um pouco mais escuro ao passar o mouse */
+    transform: translateY(-3px); /* Levanta o card */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* Aumenta a sombra */
+}
+
+/* Estilo para o título dentro do card */
+.atalho-card h3 {
+    color: var( #035309); /* Use a cor principal para o título */
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+        /* Estilos específicos para centralizar o formulário de login */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh; 
+        }
+        .login-box {
+            background-color: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .login-box h2 {
+            margin-bottom: 25px;
+            color: var(--cor-principal); 
+        }
+        .login-box .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .login-box input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box; 
+        }
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--cor-principal);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s;
+        }
+        .btn-login:hover {
+            background-color: var(--cor-secundaria);
+        }
+
+        /* -------------------------------------- */
+/* ESTILO PARA O CONTAINER DOS CARDS */
+/* -------------------------------------- */
+.atalhos-container {
+    /* 🛑 GARANTE ESPAÇAMENTO E COLUNAS UNIFORMES */
+    display: grid;
+    /* Define 3 colunas de largura igual (1fr) */
+    grid-template-columns: repeat(3, 1fr); 
+    /* Define o ESPAÇAMENTO (gap) de 20 pixels entre as linhas e colunas */
+    gap: 25px; 
+    
+    /* Centralização (opcional, mas recomendado) */
+    max-width: 1200px; /* Limita a largura em telas grandes */
+    margin: 20px auto;
+}
+
+/* -------------------------------------- */
+/* 4. MEDIA QUERY: ESTILOS PARA CELULARES/TABLETS (Max-width: 768px) */
+/* -------------------------------------- */
+@media screen and (max-width: 768px) {
+    /* Ajusta a margem do container principal */
+    .content-container {
+        padding: 20px 15px;
+    }
+    
+    /* Faz com que o Header (topo) ocupe menos espaço */
+    .header {
+        padding: 15px 20px;
+    }
+
+    /* Muda o layout de 3 colunas para 2 colunas */
+    .atalhos-container {
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 15px; 
+    }
+}
+
+    /* -------------------------------------- */
+/* 5. MEDIA QUERY: ESTILOS PARA CELULARES PEQUENOS (Max-width: 600px) */
+/* -------------------------------------- */
+@media screen and (max-width: 600px) {
+    /* Muda o layout de 2 colunas para 1 coluna (pilha) */
+    .atalhos-container {
+        grid-template-columns: 1fr;
+    }
+
+    /* 🛑 TRANSFORMA O FORMULÁRIO DE GRID PARA EMPILHADO 🛑 */
+    .form-grid {
+        display: block; /* Desativa o grid/flexbox no formulário */
+    }
+    .form-grid .form-group {
+        width: 100%; /* Faz cada campo ocupar a largura total */
+        margin-bottom: 15px;
+    }
+
+    /* 🛑 TORNA AS TABELAS MAIS LEGAIS NO CELULAR 🛑 */
+    .data-table, .data-table thead, .data-table tbody, .data-table th, .data-table td, .data-table tr { 
+        display: block; 
+    }
+    
+    /* Oculta o cabeçalho original da tabela no celular */
+    .data-table thead tr { 
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+    
+    /* Estiliza cada linha como um bloco separado */
+    .data-table tr { 
+        border: 1px solid #ddd; 
+        margin-bottom: 10px;
+        border-radius: 5px;
+    }
+    
+    /* Estiliza cada célula (coluna) como um campo */
+    .data-table td { 
+        border: none;
+        border-bottom: 1px solid #eee; 
+        position: relative;
+        padding-left: 50%; /* Espaço para o Label */
+        text-align: right;
+    }
+    
+    /* Adiciona o título da coluna (Label) antes do conteúdo */
+    .data-table td:before { 
+        content: attr(data-label); /* Usa o atributo data-label (que você já colocou no HTML!) */
+        position: absolute;
+        left: 6px;
+        width: 45%; 
+        padding-right: 10px; 
+        white-space: nowrap;
+        text-align: left;
+        font-weight: bold;
+        color: var(--cor-principal);
+    }
+    
+    /* Botões de Ação no Footer */
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .action-buttons .btn-acao {
+        width: 100%;
+    }
+}
+
+    /* Para telas <= 768px (Tablets e Celulares maiores) */
+@media screen and (max-width: 768px) {
+    /* Muda o layout de 3 colunas para 2 colunas */
+    .atalhos-container {
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 15px; 
+    }
+}
+
+/* Para telas <= 600px (Celulares) */
+@media screen and (max-width: 600px) {
+    /* Muda o layout de 2 colunas para 1 coluna (pilha) */
+    .atalhos-container {
+        grid-template-columns: 1fr;
+    }
+    /* ... (restante do código que afeta formulários e tabelas) ... */
+}

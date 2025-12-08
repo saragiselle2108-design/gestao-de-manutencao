@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIGM-IF | Login</title>
+    <link rel="stylesheet" href="style.css"> 
+
+    <script>
+        // Função para simular o login com redirecionamento condicional
+        function fazerLogin() {
+            const email = document.getElementById('login-email').value.trim();
+            const matricula = document.getElementById('login-matricula').value.trim();
+
+            if (!email || !matricula) {
+                alert("Por favor, preencha o E-mail e a Matrícula.");
+                return;
+            }
+
+            // 1. Acesso do Administrador
+            const ADMIN_MATRICULA = 'ADMIN';
+            const ADMIN_EMAIL = 'admin@ifpb.edu.br';
+
+            if (matricula.toUpperCase() === ADMIN_MATRICULA && email.toLowerCase() === ADMIN_EMAIL) {
+                // 🛑 NOVO: Salva o perfil
+                localStorage.setItem('sigm-if_perfil', 'ADMIN');
+                alert("Bem-vindo, Administrador! Redirecionando para telaInicialADMIN.html.");
+                window.location.href = 'telaInicialADMIN.html'; 
+                return;
+            }
+
+            // 2. Acesso de Membros
+            const membrosStorage = localStorage.getItem('sigm-if_membros');
+            const membros = membrosStorage ? JSON.parse(membrosStorage) : [];
+
+            // Procura por membro que tenha matrícula ou e-mail correspondente.
+            // Primeiro tenta corresponder por e-mail (se informado), caso não encontre, tenta por matrícula.
+            let membroEncontrado = null;
+            if (Array.isArray(membros) && membros.length > 0) {
+                membroEncontrado = membros.find(m => {
+                    const mEmail = (m.email || '').toLowerCase().trim();
+                    const mMatricula = (m.matricula || '').toString().trim();
+
+                    const emailMatch = mEmail && mEmail === email.toLowerCase();
+                    const matriculaMatch = mMatricula && mMatricula === matricula;
+
+                    // Requer correspondência por ambos se ambos os campos foram preenchidos no cadastro,
+                    // ou aceita correspondência por matrícula (caso o e-mail não exista no cadastro).
+                    if (mEmail) {
+                        return emailMatch && matriculaMatch;
+                    }
+                    return matriculaMatch;
+                });
+            }
+
+            if (membroEncontrado) {
+                localStorage.setItem('sigm-if_perfil', 'MEMBRO');
+                localStorage.setItem('sigm-if_membro_atual', JSON.stringify(membroEncontrado));
+                alert(`Login realizado com sucesso! Bem-vindo(a), ${membroEncontrado.nome}. Redirecionando para telainicialMEM.html.`);
+                window.location.href = 'telainicialMEM.html'; 
+                return;
+            } else {
+                alert('E-mail e/ou Matrícula não encontrados. Verifique os dados ou contate o administrador.');
+                return;
+            }
+        }
+    </script>
+ 
+</head>
+<body>
+    <header class="header">
+        <img src="IFPB.png" alt="Logotipo Instito Federal da Paraíba" class="login-logo">
+        <h1>Sistema de Gestão de Manutenção de Equipamentos</h1>
+    </header>
+
+    <main class="content-container login-container">
+        <div class="login-box">
+            <h2>Acesso SIGM-IF</h2>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-email">E-mail Institucional</label>
+                    <input type="email" id="login-email" required placeholder="seu.nome@ifpb.edu.br">
+                </div>
+                
+                <div class="form-group">
+                    <label for="login-matricula">Matrícula</label>
+                    <input type="password" id="login-matricula" required placeholder="Ex: 2025001">
+                </div>
+                
+                <button type="button" class="btn-login" onclick="fazerLogin()">Entrar</button>
+            </form>
+
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Equipe SIGM-IF</p>
+    </footer>
+</body>
+</html>

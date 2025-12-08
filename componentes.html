@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIGM-IF | Componentes</title>
+    <link rel="stylesheet" href="style.css"> 
+    
+    <script>
+        let componentesData = [];
+        const STORAGE_KEY = 'sigm-if_componentes';
+        const COUNTER_KEY = 'sigm-if_componentes_id_counter';
+        let linhaSelecionada = null; 
+
+        window.onload = loadData;
+
+        // --- Gerenciamento de ID Auto-Incrementado ---
+        function getNextId() {
+            let counter = parseInt(localStorage.getItem(COUNTER_KEY) || '100'); 
+            counter++;
+            localStorage.setItem(COUNTER_KEY, counter.toString());
+            return 'COMP-' + counter.toString().padStart(3, '0');
+        }
+
+        // --- Funções de Persistência e Carga ---
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(componentesData));
+        }
+
+        function loadData() {
+            const storedData = localStorage.getItem(STORAGE_KEY);
+            if (storedData) {
+                componentesData = JSON.parse(storedData);
+            } else {
+                componentesData = [];
+            }
+            
+            // Atualiza o contador com base no maior ID existente para evitar conflitos
+            if (componentesData.length > 0) {
+                const maxId = componentesData.reduce((max, item) => {
+                    const num = parseInt(item.codigo.split('-')[1] || '0');
+                    return num > max ? num : max;
+                }, 0);
+                localStorage.setItem(COUNTER_KEY, maxId.toString());
+            }
+
+            drawTable(componentesData);
+        }
+
+        // --- Funções de Formulário e CRUD ---
+        function toggleForm() {
+            const form = document.getElementById('form-cadastro');
+            const formElement = document.getElementById('cadastro-form-componente');
+            
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            
+            if (form.style.display === 'block' && formElement.getAttribute('data-edit-index') === null) {
+                // Se abrindo para NOVO, prepara o campo de código
+                document.getElementById('comp-id-leitura').value = 'NOVO (Gerado ao Salvar)';
+            }
+            
+            if (form.style.display === 'none') {
+                formElement.reset();
+                formElement.removeAttribute('data-edit-index');
+                document.querySelectorAll('.data-table tbody tr').forEach(row => row.classList.remove('selecionada'));
+                linhaSelecionada = null;
+            }
+        }
+
+        function salvarComponente() {
+            const form = document.getElementById('form-cadastro');
+            if (form.style.display === 'none') {
+                alert("Por favor, abra o formulário antes de Salvar.");
+                return;
+            }
+
+            // Captura de todos os campos do formulário
+            const nome = document.getElementById('comp-nome').value;
+            const tipo = document.getElementById('comp-tipo').value;
+            const qtd = document.getElementById('comp-qtd').value;
+            const local = document.getElementById('comp-local').value;
+            const observacoes = document.getElementById('comp-observacoes').value;
+            
+            // Validação de campos obrigatórios
+            if (!nome || !tipo || !qtd || !local) {
+                alert("Preencha todos os campos obrigatórios (marcados com *)!");
+                return;
+            }
+
+            let codigo;
+            const formElement = document.getElementById('cadastro-form-componente');
+            const editIndex = formElement.getAttribute('data-edit-index');
+
+            if (editIndex !== null) {
+                // EDIÇÃO: Mantém o código existente
+                codigo = componentesData[parseInt(editIndex)].codigo;
+            } else {
+                // NOVO: Gera um novo código auto-incrementado
+                codigo = getNextId();
+            }
+
+            const novoComponente = { 
+                codigo, nome, tipo, qtd, local, observacoes
+            };
+
+            if (editIndex !== null) {
+                // EDIÇÃO
+                componentesData[parseInt(editIndex)] = novoComponente;
+                alert(`Componente ${nome} (Cód: ${codigo}) editado com sucesso.`);
+                formElement.removeAttribute('data-edit-index');
+            } else {
+                // NOVO
+                componentesData.push(novoComponente);
+                alert(`Componente ${nome} (Cód: ${codigo}) salvo com sucesso!`);
+            }
+
+            saveData();
+            drawTable(componentesData);
+            formElement.reset(); 
+            toggleForm(); 
+        }
+        
+        // FUNÇÃO ATUALIZADA PARA MOSTRAR TODAS AS COLUNAS
+        function drawTable(data) {
+            const tabelaCorpo = document.querySelector('.data-table tbody');
+            tabelaCorpo.innerHTML = ''; 
+            
+            // 🛑 Cabeçalhos de todas as colunas
+            const headers = [
+                'ID', 'Nome', 'Tipo', 'Quantidade', 'Local', 'Observações'
+            ];
+
+            data.forEach((item, index) => {
+                const linha = tabelaCorpo.insertRow();
+                linha.setAttribute('data-index', componentesData.indexOf(item)); 
+                linha.onclick = function() { selecionarLinha(linha, componentesData.indexOf(item)); };
+
+                // 🛑 Dados da linha em ordem
+                const dadosLinha = [
+                    item.codigo,
+                    item.nome,
+                    item.tipo,
+                    item.qtd,
+                    item.local,
+                    item.observacoes // Observações é opcional
+                ];
+
+                dadosLinha.forEach((dado, cellIndex) => {
+                    const celula = linha.insertCell(cellIndex);
+                    celula.setAttribute('data-label', headers[cellIndex]); 
+                    celula.innerHTML = dado;
+                });
+            });
+            linhaSelecionada = null; 
+        }
+
+        function selecionarLinha(linha, index) {
+            document.querySelectorAll('.data-table tbody tr').forEach(row => {
+                row.classList.remove('selecionada');
+            });
+            linha.classList.add('selecionada');
+            linhaSelecionada = linha;
+            linhaSelecionada.dataIndex = parseInt(linha.getAttribute('data-index')); 
+        }
+
+        function excluirLinha() {
+            if (!linhaSelecionada) {
+                alert("Selecione um componente na lista para poder excluir.");
+                return;
+            }
+            if (confirm("Tem certeza que deseja excluir este componente?")) {
+                componentesData.splice(linhaSelecionada.dataIndex, 1);
+                
+                saveData(); 
+                drawTable(componentesData);
+                alert("Componente excluído com sucesso.");
+            }
+        }
+
+        function editarLinha() {
+            if (!linhaSelecionada) {
+                alert("Selecione um componente na lista para poder editar.");
+                return;
+            }
+            toggleForm();
+
+            const index = linhaSelecionada.dataIndex;
+            const item = componentesData[index];
+
+            document.getElementById('comp-id-leitura').value = item.codigo;
+            document.getElementById('comp-nome').value = item.nome;
+            document.getElementById('comp-tipo').value = item.tipo;
+            document.getElementById('comp-qtd').value = item.qtd;
+            document.getElementById('comp-local').value = item.local;
+            document.getElementById('comp-observacoes').value = item.observacoes;
+
+            document.getElementById('cadastro-form-componente').setAttribute('data-edit-index', index);
+        }
+        
+        function pesquisarComponentes() {
+            const termo = document.getElementById('search-componentes').value.toUpperCase().trim();
+            if (termo === '') {
+                drawTable(componentesData);
+                return;
+            }
+
+            const resultados = componentesData.filter(comp => {
+                return comp.nome.toUpperCase().includes(termo) || 
+                       comp.codigo.toUpperCase().includes(termo);
+            });
+            drawTable(resultados);
+        }
+        function voltarParaHome() {
+            // Tenta obter o perfil salvo no localStorage
+            const perfil = localStorage.getItem('sigm-if_perfil');
+            
+            if (perfil === 'ADMIN') {
+                window.location.href = 'telaInicialADMIN.html';
+            } else if (perfil === 'MEMBRO') {
+                window.location.href = 'telainicialMEM.html';
+            } else {
+                // Se o perfil não for encontrado (ex: usuário tentou entrar direto), redireciona para o login
+                alert("Sessão expirada ou não identificada. Por favor, faça login novamente.");
+                window.location.href = 'login.html'; 
+            }
+        }
+    </script>
+    <style>
+        .data-table tbody tr.selecionada {
+            background-color: #7bff6a !important; 
+            border: 2px solid #1de203;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <img src="IFPB.png" alt="Logotipo Instito Federal da Paraíba" class="login-logo">
+        <h1>Sistema de Gestão de Manutenção de Equipamentos</h1>
+        <p>SIGM-IF - Cadastro de Componentes</p>
+    </header>
+
+    <main class="content-container">
+        <h2>Gerenciamento de Componentes</h2>
+        
+        <div class="search-container">
+            <input type="text" id="search-componentes" placeholder="Buscar Componente (ID, Nome ou Responsável)">
+            <button class="btn-acao" onclick="pesquisarComponentes()">Buscar Componente</button>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Tipo</th>
+                    <th>Quantidade</th>
+                    <th>Local</th>
+                    <th>Observações</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+            
+        </table>
+        <div id="form-cadastro" style="display:none; padding: 20px; background-color: white; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px var(--cor-sombra);">
+            <h3>Dados do Componente (Novo/Editar)</h3>
+            <form id="cadastro-form-componente" class="form-grid"> 
+                <div class="form-group"><label>ID do Componente *</label><input type="text" id="comp-id-leitura" readonly></div>
+                
+                <div class="form-group"><label>Nome do Componente *</label><input type="text" id="comp-nome" required></div>
+                <div class="form-group"><label>Tipo do Componente *</label>
+                    <select id="comp-tipo" required>
+                        <option value="Eletrônico">Eletrônico</option>
+                        <option value="Mecânico">Mecânico</option>
+                        <option value="Consumível">Consumível</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Quantidade *</label><input type="number" id="comp-qtd" required></div>
+                <div class="form-group"><label>Local*</label><input type="text" id="comp-local" required></div>
+                <div class="form-group"><label>Observações</label><textarea id="comp-observacoes"></textarea></div>
+            </form>
+            <button class="btn-acao" onclick="salvarComponente()">Salvar</button>
+        </div>
+
+       <div class="action-buttons">
+            <button class="btn-acao" onclick="toggleForm()">Novo Componente</button>
+            <button class="btn-acao" onclick="editarLinha()">Editar</button>
+            <button class="btn-acao" onclick="excluirLinha()">Excluir</button>
+            <button class="btn-acao" onclick="voltarParaHome()">Voltar</button>
+        </div>
+
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Equipe SIGM-IF</p>
+    </footer>
+</body>
+</html>

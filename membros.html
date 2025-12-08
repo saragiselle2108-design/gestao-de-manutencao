@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIGM-IF | Membros</title>
+    <link rel="stylesheet" href="style.css"> 
+<script>
+    let membrosData = [];
+    const STORAGE_KEY = 'sigm-if_membros';
+    const COUNTER_KEY = 'sigm-if_membros_id_counter';
+    let linhaSelecionada = null; 
+
+    window.onload = loadData;
+    
+    // --- Gerenciamento de ID Auto-Incrementado ---
+    function getNextId() {
+        let counter = parseInt(localStorage.getItem(COUNTER_KEY) || '100'); 
+        counter++;
+        localStorage.setItem(COUNTER_KEY, counter.toString());
+        return 'MEMB-' + counter.toString().padStart(3, '0');
+    }
+
+    // --- Funções de Persistência e Carga ---
+    function saveData() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(membrosData));
+    }
+
+    function loadData() {
+        const storedData = localStorage.getItem(STORAGE_KEY);
+        if (storedData) {
+            membrosData = JSON.parse(storedData);
+        } else {
+            membrosData = [];
+        }
+        drawTable(membrosData);
+        if (membrosData.length > 0) {
+            const maxId = membrosData.reduce((max, item) => {
+                const num = parseInt(item.id.split('-')[1]);
+                return num > max ? num : max;
+            }, 0);
+            localStorage.setItem(COUNTER_KEY, maxId.toString());
+        }
+    }
+
+    // --- Funções de Formulário e CRUD ---
+    function toggleForm() {
+        const form = document.getElementById('form-cadastro');
+        const formElement = document.getElementById('cadastro-form-membro');
+
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        
+        if (form.style.display === 'block' && formElement.getAttribute('data-edit-index') === null) {
+             document.getElementById('mem-id-leitura').value = 'NOVO (Gerado ao Salvar)';
+        }
+
+        if (form.style.display === 'none') {
+            formElement.reset();
+            formElement.removeAttribute('data-edit-index');
+            document.querySelectorAll('.data-table tbody tr').forEach(row => row.classList.remove('selecionada'));
+            linhaSelecionada = null;
+        }
+    }
+    
+    function salvarMembro() {
+        const form = document.getElementById('form-cadastro');
+        if (form.style.display === 'none') {
+            alert("Por favor, abra o formulário antes de Salvar.");
+            return;
+        }
+        
+        // Campos obrigatórios
+        const matricula = document.getElementById('mem-matricula').value;
+        const nome = document.getElementById('mem-nome').value;
+        const equipe = document.getElementById('mem-equipe').value;
+
+        // Campos opcionais
+        const email = document.getElementById('mem-email').value;
+        const especialidades = document.getElementById('mem-especialidades').value;
+
+        if (!matricula || !nome || !equipe) {
+            alert("Preencha todos os campos obrigatórios (marcados com *)!");
+            return;
+        }
+
+        let id;
+        const formElement = document.getElementById('cadastro-form-membro');
+        const editIndex = formElement.getAttribute('data-edit-index');
+
+        if (editIndex !== null) {
+            id = membrosData[parseInt(editIndex)].id;
+        } else {
+            id = getNextId();
+        }
+
+        const novoMembro = { id, matricula, nome, equipe, email, especialidades };
+
+        if (editIndex !== null) {
+            membrosData[parseInt(editIndex)] = novoMembro;
+            alert(`Membro ${nome} (Matrícula: ${matricula}) editado com sucesso.`);
+            formElement.removeAttribute('data-edit-index');
+        } else {
+            membrosData.push(novoMembro);
+            alert(`Membro ${nome} (Matrícula: ${matricula}) salvo com sucesso!`);
+        }
+        
+        saveData();
+        drawTable(membrosData);
+        formElement.reset(); 
+        toggleForm(); 
+    }
+
+    // ... Funções drawTable, selecionarLinha, excluirLinha, editarLinha e pesquisarMembros (ajustadas para o novo objeto de dados)...
+
+    function drawTable(data) {
+        const tabelaCorpo = document.querySelector('.data-table tbody');
+        tabelaCorpo.innerHTML = ''; 
+
+        data.forEach((item, index) => {
+            const linha = tabelaCorpo.insertRow();
+            linha.setAttribute('data-index', membrosData.indexOf(item)); 
+            linha.onclick = function() { selecionarLinha(linha); };
+
+            // Incluindo Especialidades na visualização da tabela
+            const especialidades = item.especialidades || 'N/A';
+            const dadosLinha = [item.id, item.matricula, item.nome, item.equipe, item.email || 'N/A', especialidades];
+
+            dadosLinha.forEach((dado, cellIndex) => {
+                const celula = linha.insertCell(cellIndex);
+                celula.setAttribute('data-label', ['ID', 'Matrícula', 'Nome', 'Equipe', 'E-mail', 'Especialidades'][cellIndex]); 
+                celula.innerHTML = dado;
+            });
+        });
+        linhaSelecionada = null;
+    }
+
+    function selecionarLinha(linha) {
+        document.querySelectorAll('.data-table tbody tr').forEach(row => {
+            row.classList.remove('selecionada');
+        });
+        linha.classList.add('selecionada');
+        linhaSelecionada = linha;
+        linhaSelecionada.dataIndex = parseInt(linha.getAttribute('data-index')); 
+    }
+
+    function excluirLinha() {
+        if (!linhaSelecionada) {
+            alert("Selecione um membro na lista para poder excluir.");
+            return;
+        }
+        if (confirm("Tem certeza que deseja excluir este membro?")) {
+            membrosData.splice(linhaSelecionada.dataIndex, 1);
+            
+            saveData();
+            drawTable(membrosData);
+            alert("Membro excluído com sucesso.");
+        }
+    }
+
+    function editarLinha() {
+        if (!linhaSelecionada) {
+            alert("Selecione um membro na lista para poder editar.");
+            return;
+        }
+        
+        toggleForm();
+
+        const index = linhaSelecionada.dataIndex;
+        const item = membrosData[index];
+
+        document.getElementById('mem-id-leitura').value = item.id;
+        document.getElementById('mem-matricula').value = item.matricula;
+        document.getElementById('mem-nome').value = item.nome;
+        document.getElementById('mem-equipe').value = item.equipe;
+        document.getElementById('mem-email').value = item.email ;
+        document.getElementById('mem-especialidades').value = item.especialidades;
+
+        document.getElementById('cadastro-form-membro').setAttribute('data-edit-index', index);
+    }
+
+
+    function pesquisarMembros() {
+        const termo = document.getElementById('search-membros').value.toUpperCase().trim();
+        
+        if (termo === '') {
+            drawTable(membrosData);
+            return;
+        }
+
+        const resultados = membrosData.filter(membro => {
+            return membro.nome.toUpperCase().includes(termo) || 
+                   membro.matricula.toUpperCase().includes(termo) ||
+                   membro.equipe.toUpperCase().includes(termo);
+        });
+
+        drawTable(resultados);
+    }
+    
+</script>
+<style>
+    .data-table tbody tr.selecionada {
+        background-color: #7bff6a !important; 
+        border: 2px solid #1de203;
+    }
+</style>
+</head>
+<body>
+    <header class="header">
+        <img src="IFPB.png" alt="Logotipo Instito Federal da Paraíba" class="login-logo">
+        <h1>Sistema de Gestão de Manutenção de Equipamentos</h1>
+        <p>SIGM-IF - Cadastro de Membros da Equipe</p>
+    </header>
+
+    <main class="content-container">
+        <h2>Gerenciamento de Membros</h2>
+        
+        <div class="search-container">
+            <input type="text" id="search-membros" placeholder="Pesquisar Membro (Nome ou Matrícula)">
+            <button class="btn-acao" onclick="pesquisarMembros()">Pesquisar</button>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Matrícula</th>
+                    <th>Nome</th>
+                    <th>Equipe</th>
+                    <th>E-mail</th>
+                    <th>Especialidades</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
+
+        <div id="form-cadastro" style="display:none; padding: 20px; background-color: white; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px var(--cor-sombra);">
+            <h3>Dados do Membro (Novo/Editar)</h3>
+            <form id="cadastro-form-membro" class="form-grid">
+                <div class="form-group"><label>ID do Membro *</label><input type="text" id="mem-id-leitura" readonly></div>
+                <div class="form-group"><label>Matrícula do Membro *</label><input type="text" id="mem-matricula" required></div>
+                <div class="form-group"><label>Nome *</label><input type="text" id="mem-nome" required></div>
+                <div class="form-group"><label>Equipe *</label><input type="text" id="mem-equipe" required></div>
+                <div class="form-group"><label>E-Mail</label><input type="email" id="mem-email"></div>
+                <div class="form-group"><label>Especialidades</label><input type="text" id="mem-especialidades"></div>
+            </form>
+            <div style="text-align: right; margin-top: 15px;">
+                 <button class="btn-acao" onclick="salvarMembro()">Salvar</button>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn-acao" onclick="toggleForm()">Adicionar Membro</button>
+            <button class="btn-acao" onclick="editarLinha()">Editar</button>
+            <button class="btn-acao" onclick="excluirLinha()">Excluir</button>
+            <button class="btn-acao" onclick="window.location.href='telaInicialADMIN.html'">Voltar</button>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Equipe SIGM-IF</p>
+    </footer>
+</body>
+</html>

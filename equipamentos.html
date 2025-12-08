@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIGM-IF | Equipamentos</title>
+    <link rel="stylesheet" href="style.css"> 
+    
+    <script>
+        let equipamentosData = [];
+        const STORAGE_KEY = 'sigm-if_equipamentos';
+        const COUNTER_KEY = 'sigm-if_equipamentos_id_counter';
+        let linhaSelecionada = null; 
+        
+        window.onload = function() {
+            loadData();
+            loadClientesForSelect(); // Carrega clientes para o dropdown
+        };
+
+        // --- Gerenciamento de ID Auto-Incrementado ---
+        function getNextId() {
+            let counter = parseInt(localStorage.getItem(COUNTER_KEY) || '100'); 
+            counter++;
+            localStorage.setItem(COUNTER_KEY, counter.toString());
+            return 'EQUIP-' + counter.toString().padStart(3, '0');
+        }
+
+        // --- Funções de Persistência e Carga ---
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(equipamentosData));
+        }
+
+        function loadData() {
+            const storedData = localStorage.getItem(STORAGE_KEY);
+            if (storedData) {
+                equipamentosData = JSON.parse(storedData);
+            } else {
+                equipamentosData = [];
+            }
+            drawTable(equipamentosData);
+             if (equipamentosData.length > 0) {
+                const maxId = equipamentosData.reduce((max, item) => {
+                    const num = parseInt(item.codigo.split('-')[1] || '0');
+                    return num > max ? num : max;
+                }, 0);
+                localStorage.setItem(COUNTER_KEY, maxId.toString());
+            }
+        }
+
+        function loadClientesForSelect() {
+            const clientesStorage = localStorage.getItem('sigm-if_clientes');
+            const clientes = clientesStorage ? JSON.parse(clientesStorage) : [];
+            const select = document.getElementById('eq-cliente');
+            
+            select.innerHTML = '<option value="">Selecione o Cliente</option>'; 
+
+            clientes.forEach(cliente => {
+                const option = document.createElement('option');
+                option.value = cliente.nome; 
+                option.textContent = `${cliente.nome} (Cód: ${cliente.codigo})`;
+                select.appendChild(option);
+            });
+            if (clientes.length === 0) {
+                 select.innerHTML += '<option value="" disabled>Nenhum cliente cadastrado</option>';
+            }
+        }
+
+        // --- Funções de Formulário e CRUD ---
+        function toggleForm() {
+            const form = document.getElementById('form-cadastro');
+            const formElement = document.getElementById('cadastro-form-equipamento');
+
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            
+            if (form.style.display === 'block' && formElement.getAttribute('data-edit-index') === null) {
+                 document.getElementById('eq-codigo-leitura').value = 'NOVO (Gerado ao Salvar)';
+            }
+
+            if (form.style.display === 'none') {
+                formElement.reset();
+                formElement.removeAttribute('data-edit-index');
+                document.querySelectorAll('.data-table tbody tr').forEach(row => row.classList.remove('selecionada'));
+                linhaSelecionada = null;
+            }
+        }
+
+        function salvarEquipamento() {
+            const form = document.getElementById('form-cadastro');
+            if (form.style.display === 'none') {
+                alert("Por favor, abra o formulário antes de Salvar.");
+                return;
+            }
+
+            // Captura de todos os campos do formulário
+            const nome = document.getElementById('eq-nome').value;
+            const marca = document.getElementById('eq-marca').value;
+            const modelo = document.getElementById('eq-modelo').value;
+            const situacaoInicial = document.getElementById('eq-situacao-inicial').value;
+            const situacaoAtual = document.getElementById('eq-situacao-atual').value;
+            const cliente = document.getElementById('eq-cliente').value;
+            const custoOperacional = document.getElementById('eq-custo-operacional').value;
+            const componentesUtilizados = document.getElementById('eq-componentes-utilizados').value;
+            const categoria = document.getElementById('eq-categoria').value;
+            const dataUltima = document.getElementById('eq-data-ultima').value;
+            const dataProxima = document.getElementById('eq-data-proxima').value;
+            
+            // Validação de campos obrigatórios
+            if (!nome || !marca || !modelo || !situacaoInicial || !cliente) {
+                alert("Preencha todos os campos obrigatórios (marcados com *)!");
+                return;
+            }
+
+            let codigo;
+            const formElement = document.getElementById('cadastro-form-equipamento');
+            const editIndex = formElement.getAttribute('data-edit-index');
+
+            if (editIndex !== null) {
+                // EDIÇÃO: Mantém o código existente
+                codigo = equipamentosData[parseInt(editIndex)].codigo;
+            } else {
+                // NOVO: Gera um novo código auto-incrementado
+                codigo = getNextId();
+            }
+
+            const novoEquipamento = { 
+                codigo, nome, marca, modelo, situacaoInicial, situacaoAtual, cliente, 
+                custoOperacional, componentesUtilizados, categoria, dataUltima, dataProxima
+            };
+
+            if (editIndex !== null) {
+                // EDIÇÃO
+                equipamentosData[parseInt(editIndex)] = novoEquipamento;
+                alert(`Equipamento ${nome} (Cód: ${codigo}) editado com sucesso.`);
+                formElement.removeAttribute('data-edit-index');
+            } else {
+                // NOVO
+                equipamentosData.push(novoEquipamento);
+                alert(`Equipamento ${nome} (Cód: ${codigo}) salvo com sucesso!`);
+            }
+
+            saveData();
+            drawTable(equipamentosData);
+            formElement.reset(); 
+            toggleForm(); 
+        }
+        
+        // FUNÇÃO ATUALIZADA PARA MOSTRAR TODAS AS COLUNAS
+        function drawTable(data) {
+            const tabelaCorpo = document.querySelector('.data-table tbody');
+            tabelaCorpo.innerHTML = ''; 
+            
+            // 🛑 Cabeçalhos de todas as colunas
+            const headers = [
+                'Código', 'Nome', 'Marca', 'Modelo', 'Cliente', 
+                'Situação Inicial', 'Situação Atual', 'Custo Operacional', 
+                'Componentes Utilizados', 'Categoria', 'Data Última Manutenção', 
+                'Data Próxima Manutenção'
+            ];
+
+            data.forEach((item, index) => {
+                const linha = tabelaCorpo.insertRow();
+                linha.setAttribute('data-index', equipamentosData.indexOf(item)); 
+                linha.onclick = function() { selecionarLinha(linha, equipamentosData.indexOf(item)); };
+
+                // 🛑 Dados da linha em ordem
+                const dadosLinha = [
+                    item.codigo,
+                    item.nome,
+                    item.marca,
+                    item.modelo,
+                    item.cliente,
+                    item.situacaoInicial,
+                    item.situacaoAtual,
+                    item.custoOperacional,
+                    item.componentesUtilizados,
+                    item.categoria || 'N/A', 
+                    item.dataUltima || 'N/A', 
+                    item.dataProxima || 'N/A' 
+                ];
+
+                dadosLinha.forEach((dado, cellIndex) => {
+                    const celula = linha.insertCell(cellIndex);
+                    celula.setAttribute('data-label', headers[cellIndex]); 
+                    celula.innerHTML = dado;
+                });
+            });
+            linhaSelecionada = null; 
+        }
+
+        function selecionarLinha(linha, index) {
+            document.querySelectorAll('.data-table tbody tr').forEach(row => {
+                row.classList.remove('selecionada');
+            });
+            linha.classList.add('selecionada');
+            linhaSelecionada = linha;
+            linhaSelecionada.dataIndex = parseInt(linha.getAttribute('data-index')); 
+        }
+
+        function excluirLinha() {
+            if (!linhaSelecionada) {
+                alert("Selecione um equipamento na lista para poder excluir.");
+                return;
+            }
+            if (confirm("Tem certeza que deseja excluir este equipamento?")) {
+                equipamentosData.splice(linhaSelecionada.dataIndex, 1);
+                
+                saveData(); 
+                drawTable(equipamentosData);
+                alert("Equipamento excluído com sucesso.");
+            }
+        }
+
+        function editarLinha() {
+            if (!linhaSelecionada) {
+                alert("Selecione um equipamento na lista para poder editar.");
+                return;
+            }
+            toggleForm();
+
+            const index = linhaSelecionada.dataIndex;
+            const item = equipamentosData[index];
+
+            document.getElementById('eq-codigo-leitura').value = item.codigo;
+            document.getElementById('eq-nome').value = item.nome;
+            document.getElementById('eq-marca').value = item.marca;
+            document.getElementById('eq-modelo').value = item.modelo;
+            document.getElementById('eq-situacao-inicial').value = item.situacaoInicial;
+            document.getElementById('eq-situacao-atual').value = item.situacaoAtual;
+            document.getElementById('eq-cliente').value = item.cliente;
+            document.getElementById('eq-custo-operacional').value = item.custoOperacional;
+            document.getElementById('eq-componentes-utilizados').value = item.componentesUtilizados;
+            document.getElementById('eq-categoria').value = item.categoria || '';
+            document.getElementById('eq-data-ultima').value = item.dataUltima || '';
+            document.getElementById('eq-data-proxima').value = item.dataProxima || '';
+
+            document.getElementById('cadastro-form-equipamento').setAttribute('data-edit-index', index);
+        }
+        
+        function pesquisarEquipamentos() {
+            const termo = document.getElementById('search-equipamentos').value.toUpperCase().trim();
+            if (termo === '') {
+                drawTable(equipamentosData);
+                return;
+            }
+
+            const resultados = equipamentosData.filter(equip => {
+                return equip.nome.toUpperCase().includes(termo) || 
+                       equip.codigo.toUpperCase().includes(termo) || 
+                       equip.cliente.toUpperCase().includes(termo);
+            });
+            drawTable(resultados);
+        }
+        function voltarParaHome() {
+            // Tenta obter o perfil salvo no localStorage
+            const perfil = localStorage.getItem('sigm-if_perfil');
+            
+            if (perfil === 'ADMIN') {
+                window.location.href = 'telaInicialADMIN.html';
+            } else if (perfil === 'MEMBRO') {
+                window.location.href = 'telainicialMEM.html';
+            } else {
+                // Se o perfil não for encontrado (ex: usuário tentou entrar direto), redireciona para o login
+                alert("Sessão expirada ou não identificada. Por favor, faça login novamente.");
+                window.location.href = 'login.html'; 
+            }
+        }
+    </script>
+    <style>
+        .data-table tbody tr.selecionada {
+            background-color: #7bff6a !important; 
+            border: 2px solid #1de203;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <img src="IFPB.png" alt="Logotipo Instito Federal da Paraíba" class="login-logo">
+        <h1>Sistema de Gestão de Manutenção de Equipamentos</h1>
+        <p>SIGM-IF - Cadastro de Equipamentos</p>
+    </header>
+
+    <main class="content-container">
+        <h2>Gerenciamento de Equipamentos</h2>
+        
+        <div class="search-container">
+            <input type="text" id="search-equipamentos" placeholder="Buscar Equipamento (Nome, Código ou Cliente)">
+            <button class="btn-acao" onclick="pesquisarEquipamentos()">Buscar Equipamento</button>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Nome</th>
+                    <th>Marca</th>
+                    <th>Modelo</th>
+                    <th>Cliente</th>
+                    <th>Situação Inicial</th>
+                    <th>Situação Atual</th>
+                    <th>Custo Operacional</th>
+                    <th>Componentes Utilizados</th>
+                    <th>Categoria</th>
+                    <th>Data Última Manutenção</th>
+                    <th>Data Próxima Manutenção</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
+
+                <div id="form-cadastro" style="display:none; padding: 20px; background-color: white; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px var(--cor-sombra);">
+            <h3>Dados do Equipamento (Novo/Editar)</h3>
+            <form id="cadastro-form-equipamento" class="form-grid">
+                <div class="form-group"><label>Código *</label><input type="text" id="eq-codigo-leitura" readonly></div>
+                
+                <div class="form-group"><label>Nome *</label><input type="text" id="eq-nome" required></div>
+                <div class="form-group"><label>Marca *</label><input type="text" id="eq-marca" required></div>
+                <div class="form-group"><label>Modelo *</label><input type="text" id="eq-modelo" required></div>
+
+                <div class="form-group"><label>Situação Inicial (Relatada pelo Cliente) *</label><textarea id="eq-situacao-inicial" required></textarea></div>
+                <div class="form-group"><label>Situação Atual (Diagnóstico/Estado Final) </label><textarea id="eq-situacao-atual" required></textarea></div>
+
+                <div class="form-group"><label>Cliente *</label><select id="eq-cliente" required><option value="">Selecione o Cliente</option></select></div>
+
+                <div class="form-group"><label>Custo Operacional (R$) </label><input type="number" step="0.01" id="eq-custo-operacional" placeholder="Custo de peças/serviços" required></div>
+                <div class="form-group"><label>Componentes Utilizados </label><textarea id="eq-componentes-utilizados" placeholder="Lista de componentes usados" required></textarea></div>
+                
+                <div class="form-group"><label>Categoria</label><input type="text" id="eq-categoria" placeholder="Ex: Notebook, Projetor, Impressora"></div>
+                <div class="form-group"><label>Data Última Manutenção</label><input type="date" id="eq-data-ultima"></div>
+                <div class="form-group"><label>Data Próxima Manutenção</label><input type="date" id="eq-data-proxima"></div>
+            </form>
+                <button class="btn-acao" onclick="salvarEquipamento()">Salvar</button> 
+        </div>
+ 
+            <div class="action-buttons">
+                <button class="btn-acao" onclick="toggleForm()">Novo Equipamento</button>
+                <button class="btn-acao" onclick="editarLinha()">Editar</button>
+                <button class="btn-acao" onclick="excluirLinha()">Excluir</button>
+                <button class="btn-acao" onclick="voltarParaHome()">Voltar</button>
+            </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Equipe SIGM-IF</p>
+    </footer>
+</body>
+</html>
