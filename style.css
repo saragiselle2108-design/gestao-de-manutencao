@@ -434,4 +434,43 @@ body {
         grid-template-columns: 1fr;
     }
     /* ... (restante do código que afeta formulários e tabelas) ... */
+
+}
+
+/* ... [Estilos no topo do seu style.css] ... */
+
+/* -------------------------------------- */
+/* ESTILO PARA O CONTAINER DOS CARDS */
+/* -------------------------------------- */
+.atalhos-container {
+    /* 🛑 GARANTE ESPAÇAMENTO E COLUNAS UNIFORMES */
+    display: grid;
+    /* Define 3 colunas de largura igual (1fr) para telas grandes */
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px; /* Espaço entre os cards */
+    margin-top: 25px;
+}
+/* ... [O restante dos seus estilos] ... */
+
+/* -------------------------------------- */
+/* 4. MEDIA QUERY: ESTILOS PARA CELULARES/TABLETS (Max-width: 768px) */
+/* -------------------------------------- */
+@media screen and (max-width: 768px) {
+    /* Mudar de 3 colunas para 2 colunas */
+    .atalhos-container {
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 15px; 
+    }
+    /* ... (outras regras de layout) ... */
+}
+
+/* -------------------------------------- */
+/* 5. MEDIA QUERY: ESTILOS PARA CELULARES PEQUENOS (Max-width: 600px) */
+/* -------------------------------------- */
+@media screen and (max-width: 600px) {
+    /* Mudar de 2 colunas para 1 coluna (empilhado) */
+    .atalhos-container {
+        grid-template-columns: 1fr;
+    }
+    /* ... (outras regras de formulário/tabela) ... */
 }
