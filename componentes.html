@@ -47,6 +47,19 @@
             drawTable(componentesData);
         }
 
+            function closeForm() {
+        const form = document.getElementById('form-cadastro');
+        const formElement = document.getElementById('cadastro-form-componentes');
+        
+        form.style.display = 'none'; // Força o fechamento
+
+        formElement.reset();
+        formElement.removeAttribute('data-edit-index');
+        // Remove a seleção da linha na tabela
+        document.querySelectorAll('.data-table tbody tr').forEach(row => row.classList.remove('selecionada'));
+        linhaSelecionada = null;
+    }
+
         // --- Funções de Formulário e CRUD ---
         function toggleForm() {
             const form = document.getElementById('form-cadastro');
@@ -280,6 +293,7 @@
                 <div class="form-group"><label>Observações</label><textarea id="comp-observacoes"></textarea></div>
             </form>
             <button class="btn-acao" onclick="salvarComponente()">Salvar</button>
+            <button type="button" class="btn-acao" onclick="closeForm()" style="background-color: #dc3545;">Cancelar</button>
         </div>
 
        <div class="action-buttons">
