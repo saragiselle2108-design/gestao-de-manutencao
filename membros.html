@@ -43,6 +43,19 @@
         }
     }
 
+        function closeForm() {
+        const form = document.getElementById('form-cadastro');
+        const formElement = document.getElementById('cadastro-form-membros');
+        
+        form.style.display = 'none'; // Força o fechamento
+
+        formElement.reset();
+        formElement.removeAttribute('data-edit-index');
+        // Remove a seleção da linha na tabela
+        document.querySelectorAll('.data-table tbody tr').forEach(row => row.classList.remove('selecionada'));
+        linhaSelecionada = null;
+    }
+
     // --- Funções de Formulário e CRUD ---
     function toggleForm() {
         const form = document.getElementById('form-cadastro');
@@ -246,6 +259,7 @@
             </form>
             <div style="text-align: right; margin-top: 15px;">
                  <button class="btn-acao" onclick="salvarMembro()">Salvar</button>
+                 <button type="button" class="btn-acao" onclick="closeForm()" style="background-color: #dc3545;">Cancelar</button>
             </div>
         </div>
 
