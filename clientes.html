@@ -6,17 +6,19 @@
     <title>SIGM-IF | Clientes</title>
     <link rel="stylesheet" href="style.css"> 
 <script>
+    // Código revisado com proteções e logs para facilitar depuração
     let clientesData = [];
     const STORAGE_KEY = 'sigm-if_clientes';
-    const COUNTER_KEY = 'sigm-if_clientes_id_counter'; // Chave para o contador de ID
+    const COUNTER_KEY = 'sigm-if_clientes_id_counter';
     let linhaSelecionada = null; 
 
-    window.onload = loadData;
+    // Use DOMContentLoaded para garantir que o DOM exista
+    document.addEventListener('DOMContentLoaded', loadData);
 
     // --- Gerenciamento de ID Auto-Incrementado ---
     function getNextId() {
-        // Carrega o contador atual (inicia em 100 se não existir)
-        let counter = parseInt(localStorage.getItem(COUNTER_KEY) || '100'); 
+        let counter = parseInt(localStorage.getItem(COUNTER_KEY) || '100', 10);
+        if (!Number.isFinite(counter)) counter = 100;
         counter++;
         localStorage.setItem(COUNTER_KEY, counter.toString());
         return 'CLI-' + counter.toString().padStart(3, '0');
@@ -24,49 +26,69 @@
 
     // --- Funções de Persistência e Carga ---
     function saveData() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(clientesData));
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(clientesData));
+        } catch (e) {
+            console.error('Erro ao salvar dados no localStorage:', e);
+            alert('Erro ao salvar dados localmente. Veja o console para mais detalhes.');
+        }
     }
 
     function loadData() {
         const storedData = localStorage.getItem(STORAGE_KEY);
         if (storedData) {
-            clientesData = JSON.parse(storedData);
+            try {
+                const parsed = JSON.parse(storedData);
+                clientesData = Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                console.error('Dados inválidos em localStorage (sigm-if_clientes). Limpando e iniciando vazio.', e);
+                clientesData = [];
+                localStorage.removeItem(STORAGE_KEY);
+            }
         } else {
             clientesData = [];
         }
-        
+
         // Atualiza o contador com base no maior ID existente para evitar conflitos
         if (clientesData.length > 0) {
             const maxId = clientesData.reduce((max, item) => {
-                // Pega o número após 'CLI-'
-                const num = parseInt(item.codigo.split('-')[1] || '0');
-                return num > max ? num : max;
-            }, 0);
+                if (!item || typeof item.codigo !== 'string') return max;
+                const parts = item.codigo.split('-');
+                const num = parseInt(parts[1], 10);
+                return (Number.isFinite(num) && num > max) ? num : max;
+            }, 100);
             localStorage.setItem(COUNTER_KEY, maxId.toString());
         }
 
         drawTable(clientesData);
+        console.log('Dados carregados:', clientesData);
     }
 
-    // --- Funções de Formulário e CRUD ---
-    function toggleForm() {
+    // --- Funções de Controle de Formulário ---
+    function openForm() {
         const form = document.getElementById('form-cadastro');
         const formElement = document.getElementById('cadastro-form-cliente');
-        
-        form.style.display = form.style.display === 'none' ? 'block' : 'none';
-        
-        if (form.style.display === 'block' && formElement.getAttribute('data-edit-index') === null) {
+
+        form.style.display = 'block';
+
+        const editIndex = formElement.getAttribute('data-edit-index');
+        if (editIndex == null) { // cobre null e undefined
             document.getElementById('cli-codigo-leitura').value = 'NOVO (Gerado ao Salvar)';
-        }
-        
-        if (form.style.display === 'none') {
-            formElement.reset();
-            formElement.removeAttribute('data-edit-index');
-            document.querySelectorAll('.data-table tbody tr').forEach(row => row.classList.remove('selecionada'));
-            linhaSelecionada = null;
         }
     }
 
+    function closeForm() {
+        const form = document.getElementById('form-cadastro');
+        const formElement = document.getElementById('cadastro-form-cliente');
+
+        form.style.display = 'none';
+        formElement.reset();
+        formElement.removeAttribute('data-edit-index');
+        document.querySelectorAll('.data-table tbody tr').forEach(row => row.classList.remove('selecionada'));
+        linhaSelecionada = null;
+    }
+
+    // --- Funções de CRUD ---
     function salvarCliente() {
         const form = document.getElementById('form-cadastro');
         if (form.style.display === 'none') {
@@ -74,16 +96,13 @@
             return;
         }
 
-        // Campos obrigatórios (de acordo com a última solicitação)
-        const nome = document.getElementById('cli-nome').value;
-        const tipo = document.getElementById('cli-tipo').value;
-        const cpf = document.getElementById('cli-cpf').value;
+        const nome = document.getElementById('cli-nome').value.trim();
+        const tipo = document.getElementById('cli-tipo').value.trim();
+        const cpf = document.getElementById('cli-cpf').value.trim();
+        const email = document.getElementById('cli-email').value.trim();
+        const telefone = document.getElementById('cli-telefone').value.trim();
+        const endereco = document.getElementById('cli-endereco').value.trim();
 
-        // Campos opcionais/adicionais
-        const email = document.getElementById('cli-email').value;
-        const telefone = document.getElementById('cli-telefone').value; // CAMPO NOVO
-        const endereco = document.getElementById('cli-endereco').value; // CAMPO NOVO
-        
         if (!nome || !tipo || !cpf ) {
             alert("Preencha todos os campos obrigatórios (marcados com *)!");
             return;
@@ -93,69 +112,70 @@
         const formElement = document.getElementById('cadastro-form-cliente');
         const editIndex = formElement.getAttribute('data-edit-index');
 
-        if (editIndex !== null) {
-            // EDIÇÃO: Mantém o código existente
-            codigo = clientesData[parseInt(editIndex)].codigo;
+        if (editIndex != null) {
+            // EDIÇÃO: Mantém o código existente (editIndex é string)
+            const idx = parseInt(editIndex, 10);
+            if (!Number.isFinite(idx) || !clientesData[idx]) {
+                alert('Índice de edição inválido. Recarregue a página e tente novamente.');
+                return;
+            }
+            codigo = clientesData[idx].codigo;
         } else {
             // NOVO: Gera um novo código auto-incrementado
             codigo = getNextId();
         }
 
-        const novoCliente = { 
-            codigo, nome, tipo, cpf, email, telefone, endereco
-        };
+        const novoCliente = { codigo, nome, tipo, cpf, email, telefone, endereco };
 
-        if (editIndex !== null) {
-            // EDIÇÃO
-            clientesData[parseInt(editIndex)] = novoCliente;
+        if (editIndex != null) {
+            const idx = parseInt(editIndex, 10);
+            clientesData[idx] = novoCliente;
             alert(`Cliente ${nome} (Cód: ${codigo}) editado com sucesso.`);
-            formElement.removeAttribute('data-edit-index');
         } else {
-            // NOVO
             clientesData.push(novoCliente);
             alert(`Cliente ${nome} (Cód: ${codigo}) salvo com sucesso!`);
         }
 
         saveData();
         drawTable(clientesData);
-        formElement.reset(); 
-        toggleForm(); 
+        closeForm();
     }
     
     function drawTable(data) {
-        const tabelaCorpo = document.querySelector('.data-table tbody');
-        tabelaCorpo.innerHTML = ''; 
+        try {
+            const tabelaCorpo = document.querySelector('.data-table tbody');
+            tabelaCorpo.innerHTML = '';
 
-        data.forEach((item, index) => {
-            const linha = tabelaCorpo.insertRow();
-            // É importante usar clientesData.indexOf(item) para garantir o index correto após a filtragem
-            linha.setAttribute('data-index', clientesData.indexOf(item)); 
-            linha.onclick = function() { selecionarLinha(linha, clientesData.indexOf(item)); };
+            data.forEach((item) => {
+                const linha = tabelaCorpo.insertRow();
+                linha.setAttribute('data-codigo', item.codigo || '');
+                linha.onclick = function() { selecionarLinha(linha); };
 
-            // INCLUÍNDO TELEFONE E ENDEREÇO NA VISUALIZAÇÃO DA TABELA
-            const dadosLinha = [
-                item.nome, item.tipo, item.codigo, item.cpf, item.email, 
-                item.telefone, item.endereco
-            ];
+                const dadosLinha = [
+                    item.nome || '', item.tipo || '', item.codigo || '', item.cpf || '', item.email || '',
+                    item.telefone || '', item.endereco || ''
+                ];
 
-            const headers = ['Nome', 'Tipo', 'Código', 'CPF', 'E-mail', 'Telefone', 'Endereço'];
+                const headers = ['Nome', 'Tipo', 'Código', 'CPF', 'E-mail', 'Telefone', 'Endereço'];
 
-            dadosLinha.forEach((dado, cellIndex) => {
-                const celula = linha.insertCell(cellIndex);
-                celula.setAttribute('data-label', headers[cellIndex]); 
-                celula.innerHTML = dado;
+                dadosLinha.forEach((dado, cellIndex) => {
+                    const celula = linha.insertCell(cellIndex);
+                    celula.setAttribute('data-label', headers[cellIndex]);
+                    celula.innerHTML = dado;
+                });
             });
-        });
-        linhaSelecionada = null; 
+            linhaSelecionada = null;
+        } catch (e) {
+            console.error('Erro ao desenhar a tabela:', e);
+        }
     }
 
-    function selecionarLinha(linha, index) {
+    function selecionarLinha(linha) {
         document.querySelectorAll('.data-table tbody tr').forEach(row => {
             row.classList.remove('selecionada');
         });
         linha.classList.add('selecionada');
         linhaSelecionada = linha;
-        linhaSelecionada.dataIndex = parseInt(linha.getAttribute('data-index')); 
     }
 
     function excluirLinha() {
@@ -163,13 +183,20 @@
             alert("Selecione um cliente na lista para poder excluir.");
             return;
         }
-        if (confirm("Tem certeza que deseja excluir este cliente?")) {
-            // O splice usa o dataIndex (índice na lista completa)
-            clientesData.splice(linhaSelecionada.dataIndex, 1);
-            
-            saveData(); 
-            drawTable(clientesData);
-            alert("Cliente excluído com sucesso.");
+
+        const codigoCliente = linhaSelecionada.getAttribute('data-codigo') || '';
+
+        if (confirm("Tem certeza que deseja excluir o cliente com Código " + codigoCliente + "?")) {
+            const indexParaExcluir = clientesData.findIndex(c => c && c.codigo === codigoCliente);
+            if (indexParaExcluir !== -1) {
+                clientesData.splice(indexParaExcluir, 1);
+                saveData();
+                drawTable(clientesData);
+                alert("Cliente excluído com sucesso.");
+            } else {
+                alert("Erro: Cliente não encontrado na base de dados.");
+            }
+            linhaSelecionada = null;
         }
     }
 
@@ -178,55 +205,64 @@
             alert("Selecione um cliente na lista para poder editar.");
             return;
         }
-        toggleForm();
 
-        const index = linhaSelecionada.dataIndex;
+        openForm();
+
+        const formElement = document.getElementById('cadastro-form-cliente');
+        const codigoCliente = linhaSelecionada.getAttribute('data-codigo') || '';
+        const index = clientesData.findIndex(c => c && c.codigo === codigoCliente);
+
+        if (index === -1) {
+            alert("Erro: Cliente não encontrado para edição.");
+            closeForm();
+            return;
+        }
+
         const item = clientesData[index];
 
-        document.getElementById('cli-nome').value = item.nome;
-        document.getElementById('cli-tipo').value = item.tipo;
-        document.getElementById('cli-codigo-leitura').value = item.codigo; // Código lido
-        document.getElementById('cli-cpf').value = item.cpf;
-        document.getElementById('cli-email').value = item.email;
-        document.getElementById('cli-endereco').value = item.endereco; // NOVO CAMPO
+        document.getElementById('cli-nome').value = item.nome || '';
+        document.getElementById('cli-tipo').value = item.tipo || '';
+        document.getElementById('cli-codigo-leitura').value = item.codigo || '';
+        document.getElementById('cli-cpf').value = item.cpf || '';
+        document.getElementById('cli-email').value = item.email || '';
+        document.getElementById('cli-telefone').value = item.telefone || '';
+        document.getElementById('cli-endereco').value = item.endereco || '';
 
-        document.getElementById('cadastro-form-cliente').setAttribute('data-edit-index', index);
+        formElement.setAttribute('data-edit-index', index.toString());
     }
     
     function pesquisarClientes() {
-        const termo = document.getElementById('search-clientes').value.toUpperCase().trim();
+        const termo = (document.getElementById('search-clientes').value || '').toUpperCase().trim();
         if (termo === '') {
             drawTable(clientesData);
             return;
         }
 
         const resultados = clientesData.filter(cliente => {
-            return cliente.nome.toUpperCase().includes(termo) || 
-                   cliente.codigo.toUpperCase().includes(termo) || 
-                   cliente.cpf.toUpperCase().includes(termo);
+            if (!cliente) return false;
+            return (cliente.nome || '').toUpperCase().includes(termo) ||
+                   (cliente.codigo || '').toUpperCase().includes(termo) ||
+                   (cliente.cpf || '').toUpperCase().includes(termo);
         });
         drawTable(resultados);
     }
 
-    // Adicionar em cada arquivo (clientes.html, equipamentos.html, etc.)
-        function voltarParaHome() {
-            // Tenta obter o perfil salvo no localStorage
-            const perfil = localStorage.getItem('sigm-if_perfil');
-            
-            if (perfil === 'ADMIN') {
-                window.location.href = 'telaInicialADMIN.html';
-            } else if (perfil === 'MEMBRO') {
-                window.location.href = 'telainicialMEM.html';
-            } else {
-                // Se o perfil não for encontrado (ex: usuário tentou entrar direto), redireciona para o login
-                alert("Sessão expirada ou não identificada. Por favor, faça login novamente.");
-                window.location.href = 'login.html'; 
-            }
+    function voltarParaHome() {
+        const perfil = localStorage.getItem('sigm-if_perfil');
+
+        if (perfil === 'ADMIN') {
+            window.location.href = 'telaInicialADMIN.html';
+        } else if (perfil === 'MEMBRO') {
+            window.location.href = 'telainicialMEM.html';
+        } else {
+            alert("Sessão não identificada. Redirecionando para o login.");
+            window.location.href = 'login.html';
         }
+    }
 </script>
 <style>
     .data-table tbody tr.selecionada {
-        background-color: #7bff6a !important; 
+        background-color: #7bff6a !important;
         border: 2px solid #1de203;
     }
 </style>
@@ -254,26 +290,39 @@
                     <th>Código</th>
                     <th>CPF</th>
                     <th>E-mail</th>
-                    <th>Telefone</th> <th>Endereço</th> </tr>
+                    <th>Telefone</th> 
+                    <th>Endereço</th> 
+                </tr>
             </thead>
             <tbody>
-                </tbody>
+            </tbody>
         </table>
 
         <div id="form-cadastro" style="display:none; padding: 20px; background-color: white; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px var(--cor-sombra);">
             <h3>Dados do Cliente (Novo/Editar)</h3>
-            <form id="cadastro-form-cliente" class="form-grid">
-                <div class="form-group"><label>Código *</label><input type="text" id="cli-codigo-leitura" readonly></div>
-                <div class="form-group"><label>Nome Completo *</label><input type="text" id="cli-nome" required></div>
-                <div class="form-group"><label>Tipo de Cliente *</label><select id="cli-tipo" required><option>Aluno</option><option>Professor</option><option>Funcionário</option></select></div>
-                <div class="form-group"><label>CPF *</label><input type="text" id="cli-cpf" required></div>
-                <div class="form-group"><label>E-Mail</label><input type="email" id="cli-email"></div>
-                <div class="form-group"><label>Telefone</label><input type="text" id="cli-telefone" ></div> <div class="form-group"><label>Endereço</label><input type="text" id="cli-endereco" ></div> 
-            <button class="btn-acao" onclick="salvarCliente()">Salvar</button>        
+            <form id="cadastro-form-cliente" onsubmit="return false;">
+                <div class="form-grid">
+                    <div class="form-group"><label>Código *</label><input type="text" id="cli-codigo-leitura" readonly></div>
+                    <div class="form-group"><label>Nome Completo *</label><input type="text" id="cli-nome" required></div>
+                    <div class="form-group"><label>Tipo de Cliente *</label>
+                        <select id="cli-tipo" required>
+                            <option>Aluno</option><option>Professor</option><option>Funcionário</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>CPF *</label><input type="text" id="cli-cpf" required></div>
+                    <div class="form-group"><label>E-Mail</label><input type="email" id="cli-email"></div>
+                    <div class="form-group"><label>Telefone</label><input type="text" id="cli-telefone" ></div> 
+                    <div class="form-group"><label>Endereço</label><input type="text" id="cli-endereco" ></div> 
+                </div>
+                <div style="margin-top: 20px;">
+                    <button type="button" class="btn-acao" onclick="salvarCliente()" style="background-color: #28a745;">Salvar</button>
+                    <button type="button" class="btn-acao" onclick="closeForm()" style="background-color: #dc3545;">Cancelar</button>        
+                </div>
+            </form>
         </div>
 
        <div class="action-buttons">
-            <button class="btn-acao" onclick="toggleForm()">Novo Cliente</button>
+            <button class="btn-acao" onclick="openForm()">Novo Cliente</button>
             <button class="btn-acao" onclick="editarLinha()">Editar</button>
             <button class="btn-acao" onclick="excluirLinha()">Excluir</button>
             <button class="btn-acao" onclick="voltarParaHome()">Voltar</button>
