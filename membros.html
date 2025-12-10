@@ -91,7 +91,7 @@
         const email = document.getElementById('mem-email').value;
         const especialidades = document.getElementById('mem-especialidades').value;
 
-        if (!matricula || !nome || !equipe) {
+        if (!matricula || !nome || !equipe || !email) {
             alert("Preencha todos os campos obrigatórios (marcados com *)!");
             return;
         }
@@ -254,7 +254,7 @@
                 <div class="form-group"><label>Matrícula do Membro *</label><input type="text" id="mem-matricula" required></div>
                 <div class="form-group"><label>Nome *</label><input type="text" id="mem-nome" required></div>
                 <div class="form-group"><label>Equipe *</label><input type="text" id="mem-equipe" required></div>
-                <div class="form-group"><label>E-Mail</label><input type="email" id="mem-email"></div>
+                <div class="form-group"><label>E-Mail *</label><input type="email" id="mem-email"></div>
                 <div class="form-group"><label>Especialidades</label><input type="text" id="mem-especialidades"></div>
             </form>
             <div style="text-align: right; margin-top: 15px;">
@@ -276,3 +276,4 @@
     </footer>
 </body>
 </html>
+
